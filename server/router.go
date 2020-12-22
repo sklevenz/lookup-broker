@@ -21,9 +21,12 @@ const (
 func New() http.Handler {
 	router := mux.NewRouter().StrictSlash(true)
 
-	// v2Router := router.PathPrefix("/v2/").Subrouter()
+	v2Router := router.PathPrefix("/v2/").Subrouter()
+	v2Router.HandleFunc("/catalog/", catalogHandler).Name("v2.catalog").Methods(http.MethodGet)
 
 	router.HandleFunc("/health/", healthHandler).Name("health").Methods(http.MethodGet)
+	router.HandleFunc("/", homeHandler).Name("home").Methods(http.MethodGet)
+
 	router.Use(logHandler)
 
 	return router

@@ -6,7 +6,7 @@ import (
 
 	"os"
 
-	"github.com/gorilla/mux"
+	"github.com/sklevenz/lookup-broker/server"
 )
 
 const (
@@ -31,7 +31,7 @@ func main() {
 	log.Printf("version: %v", Version)
 	log.Printf("commit: %v", Commit)
 
-	brokerServer := mux.NewRouter().StrictSlash(true)
+	brokerServer := server.New()
 
 	log.Printf("call server: http://localhost:%v", port)
 

@@ -60,7 +60,7 @@ def login(verbose):
 def push(verbose):
     print ("-- push to cloud foundry")
 
-    os.system("cf push")
+    os.system("cf push lookup-broker")
 
 def dispatcher(cmd):
    dispatcher={
