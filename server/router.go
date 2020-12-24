@@ -22,6 +22,10 @@ func New() http.Handler {
 	router := mux.NewRouter().StrictSlash(true)
 
 	v2Router := router.PathPrefix("/v2/").Subrouter()
+	v2Router.Use(apiVersionHandler)
+	v2Router.Use(requestIdentityLogHandler)
+	v2Router.Use(originatingIdentityLogHandler)
+	v2Router.Use(etagHandler)
 	v2Router.HandleFunc("/catalog/", catalogHandler).Name("v2.catalog").Methods(http.MethodGet)
 
 	router.HandleFunc("/health/", healthHandler).Name("health").Methods(http.MethodGet)

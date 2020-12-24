@@ -14,7 +14,7 @@ const (
 )
 
 var (
-	// Version set by go build via -ldflags "'-X main.Version=1.0'"
+	// Version set by go build via -ldflags "'-X main.Version=1.0.0'"
 	Version string = "n/a"
 	// Commit set by go build via -ldflags "'-X main.Commit=123'"
 	Commit string = "n/a"
