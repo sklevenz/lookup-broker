@@ -1,0 +1,44 @@
+---
+version: 1
+applications:
+  - name: lookup
+    memory: 50M
+    instances: 3
+    strategy: rolling
+    buildpacks:
+      - go_buildpack
+    health-check-type: http
+    health-check-http-endpoint: /health
+    env:
+      LOOKUP: |-
+        {
+          "cloud-foundry-landscapes": [
+            {
+              "key": "cf-eu10",
+              "cc": "https://api.cf.eu10.hana.ondemand.com",
+              "uaa": "https://uaa.cf.eu10.hana.ondemand.com",
+              "labels": [
+                "master",
+                "aws"
+              ]
+            },
+            {
+              "key": "cf-eu10-001",
+              "cc": "https://api.cf.eu10-001.hana.ondemand.com",
+              "uaa": "https://uaa.cf.eu10-001.hana.ondemand.com",
+              "labels": [
+                "scaleout",
+                "aws"
+              ]
+            },
+            {
+              "key": "cf-eu10-002",
+              "cc": "https://api.cf.eu10-002.hana.ondemand.com",
+              "uaa": "https://uaa.cf.eu10-001.hana.ondemand.com",
+              "labels": [
+                "scaleout",
+                "aws"
+              ]
+            }
+          ]
+        }
