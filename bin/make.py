@@ -84,7 +84,7 @@ def push(verbose):
         print("call \'./bin/make.py config\'")
         exit()
 
-    os.system("cf push -f {}".format(manifest))
+    os.system("cf push -f {} --strategy rolling".format(manifest))
 
 
 def config(verbose):

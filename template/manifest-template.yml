@@ -4,12 +4,13 @@ applications:
   - name: lookup
     memory: 50M
     instances: 3
-    strategy: rolling
     buildpacks:
       - go_buildpack
-    health-check-type: http
-    health-check-http-endpoint: /health
+    health-check-type: https
+    health-check-http-endpoint: /health/
     env:
+      GO_LINKER_SYMBOL: main.Commit
+      GO_LINKER_VALUE: "unknown"
       LOOKUP: |-
         {
           "cloud-foundry-landscapes": [
