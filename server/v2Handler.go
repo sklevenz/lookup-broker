@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sklevenz/lookup-broker/landscape"
 	"github.com/sklevenz/lookup-broker/openapi"
 )
 
@@ -19,10 +21,6 @@ const (
 	headerAPIVersion            string = "X-Broker-API-Version"
 	headerAPIOrginatingIdentity string = "X-Broker-API-Originating-Identity"
 	headerAPIRequestIdentity    string = "X-Broker-API-Request-Identity"
-)
-
-var (
-	startTime = time.Now()
 )
 
 type userIDType struct {
@@ -163,7 +161,12 @@ func buildCatalog() *openapi.Catalog {
 func etagHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		w.Header().Set(headerETag, fmt.Sprintf("W/\"%v\"", startTime))
+		landscapes := landscape.Get()
+		s1 := fmt.Sprintf("%v", landscapes)
+		s2 := md5.Sum([]byte(s1))
+		hash := fmt.Sprintf("%x", s2)
+
+		w.Header().Set(headerETag, fmt.Sprintf("W/\"%v\"", hash))
 
 		next.ServeHTTP(w, r)
 	})

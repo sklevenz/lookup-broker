@@ -151,6 +151,5 @@ func TestCatalogHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
 	assert.Equal(t, contentTypeJSON, response.Header().Get(headerContentType))
-	assert.Equal(t, fmt.Sprintf("W/\"%v\"", startTime), response.Header().Get(headerETag))
-	assert.Equal(t, fmt.Sprintf("%v", startTime.UTC().Format(http.TimeFormat)), response.Header().Get(headerLastModified))
+	assert.Equal(t, fmt.Sprintf("W/\"%v\"", "97a15070f5f8c3bfe47678c5409471f6"), response.Header().Get(headerETag))
 }
