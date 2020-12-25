@@ -10,36 +10,31 @@ applications:
     health-check-http-endpoint: /health/
     env:
       GO_LINKER_SYMBOL: main.Commit
-      GO_LINKER_VALUE: "unknown"
-      LOOKUP: |-
+      GO_LINKER_VALUE: "???"
+      LANDSCAPES: |-
         {
-          "cloud-foundry-landscapes": [
-            {
-              "key": "cf-eu10",
-              "cc": "https://api.cf.eu10.hana.ondemand.com",
-              "uaa": "https://uaa.cf.eu10.hana.ondemand.com",
-              "labels": [
-                "master",
-                "aws"
+          "cf-eu10": {
+            "cloudcontroller": "https://api.cf.eu10.hana.ondemand.com",
+            "uaa": "https://uaa.cf.eu10.hana.ondemand.com",
+            "labels": [
+              "master",
+              "aws"
               ]
-            },
-            {
-              "key": "cf-eu10-001",
-              "cc": "https://api.cf.eu10-001.hana.ondemand.com",
-              "uaa": "https://uaa.cf.eu10-001.hana.ondemand.com",
-              "labels": [
-                "scaleout",
-                "aws"
+          },
+          "cf-eu10-001": {
+            "cloudcontroller": "https://api.cf.eu10-001.hana.ondemand.com",
+            "uaa": "https://uaa.cf.eu10-001.hana.ondemand.com",
+            "labels": [
+              "scaleout",
+              "aws"
               ]
-            },
-            {
-              "key": "cf-eu10-002",
-              "cc": "https://api.cf.eu10-002.hana.ondemand.com",
-              "uaa": "https://uaa.cf.eu10-001.hana.ondemand.com",
-              "labels": [
-                "scaleout",
-                "aws"
+          },
+          "cf-eu10-002": {
+            "cloudcontroller": "https://api.cf.eu10-002.hana.ondemand.com",
+            "uaa": "https://uaa.cf.eu10-002.hana.ondemand.com",
+            "labels": [
+              "scaleout",
+              "aws"
               ]
-            }
-          ]
+          }
         }
