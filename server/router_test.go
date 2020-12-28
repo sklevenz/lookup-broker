@@ -1,10 +1,11 @@
 package server
 
 import (
-	"log"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRouter(t *testing.T) {
-	log.Println("nothing to test")
+	assert.NotNil(t, New())
 }

@@ -2,11 +2,13 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/sklevenz/lookup-broker/openapi"
@@ -52,7 +54,7 @@ func TestCorrectApiVersion(t *testing.T) {
 	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
 	response := httptest.NewRecorder()
 
-	request.Header.Set(headerAPIVersion, "2.2")
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
 	New().ServeHTTP(response, request)
 
 	assert.Equal(t, contentTypeJSON, response.Header().Get(headerContentType))
@@ -63,10 +65,9 @@ func TestRedirect(t *testing.T) {
 	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 	response := httptest.NewRecorder()
 
-	request.Header.Set(headerAPIVersion, "2.2")
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
 	New().ServeHTTP(response, request)
 
-	assert.Equal(t, contentTypeHTML, response.Header().Get(headerContentType))
 	assert.Equal(t, http.StatusMovedPermanently, response.Result().StatusCode)
 }
 func TestAPIOriginatingIdentity(t *testing.T) {
@@ -141,7 +142,6 @@ func TestOSBErrorHandler(t *testing.T) {
 
 func TestCatalogHandler(t *testing.T) {
 	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
-	request.SetBasicAuth("username", "password")
 	response := httptest.NewRecorder()
 
 	request.Header.Set(headerAPIVersion, "2.2")
@@ -152,4 +152,63 @@ func TestCatalogHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
 	assert.Equal(t, contentTypeJSON, response.Header().Get(headerContentType))
 	assert.Equal(t, fmt.Sprintf("W/\"%v\"", "97a15070f5f8c3bfe47678c5409471f6"), response.Header().Get(headerETag))
+}
+
+func TestInstancesHandler(t *testing.T) {
+	data := openapi.ServiceInstanceProvisionRequest{
+		ServiceId:        "1",
+		PlanId:           "1.1",
+		OrganizationGuid: "x",
+		SpaceGuid:        "y",
+		Context: map[string]interface{}{
+			"organization_guid": "x",
+			"space_guid":        "y",
+		},
+	}
+
+	payloadBuf := new(bytes.Buffer)
+	json.NewEncoder(payloadBuf).Encode(data)
+
+	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/:123/", payloadBuf)
+	assert.Nil(t, err)
+
+	request.Header.Set(headerContentType, contentTypeJSON)
+
+	response := httptest.NewRecorder()
+
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusCreated, response.Result().StatusCode)
+}
+
+func TestInstancesHandlerWrongBody(t *testing.T) {
+	data := openapi.ServiceInstanceProvisionRequest{}
+
+	payloadBuf := new(bytes.Buffer)
+	json.NewEncoder(payloadBuf).Encode(data)
+
+	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/:123/", payloadBuf)
+	assert.Nil(t, err)
+
+	request.Header.Set(headerContentType, contentTypeJSON)
+
+	response := httptest.NewRecorder()
+
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusBadRequest, response.Result().StatusCode)
+}
+
+func TestInstancesHandlerWrongContentType(t *testing.T) {
+	request, _ := http.NewRequest(http.MethodPut, "/v2/service_instances/:123/", strings.NewReader("text"))
+	request.Header.Set(headerContentType, contentTypeTEXT)
+
+	response := httptest.NewRecorder()
+
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusNotFound, response.Result().StatusCode)
 }

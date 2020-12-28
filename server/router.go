@@ -11,10 +11,10 @@ const (
 	headerETag         string = "ETag"
 	headerLastModified string = "Last-Modified"
 
-	contentTypeCSS  string = "text/css; charset=utf-8"
-	contentTypeHTML string = "text/html; charset=utf-8"
-	contentTypeTEXT string = "text/plain; charset=utf-8"
-	contentTypeJSON string = "application/json; charset=utf-8"
+	contentTypeCSS  string = "text/css"
+	contentTypeHTML string = "text/html"
+	contentTypeTEXT string = "text/plain"
+	contentTypeJSON string = "application/json"
 )
 
 // New implements the routes defined by OSB v2.0 API
@@ -27,6 +27,7 @@ func New() http.Handler {
 	v2Router.Use(originatingIdentityLogHandler)
 	v2Router.Use(etagHandler)
 	v2Router.HandleFunc("/catalog/", catalogHandler).Name("v2.catalog").Methods(http.MethodGet)
+	v2Router.HandleFunc("/service_instances/:{id}/", instancesHandler).Headers(headerContentType, contentTypeJSON).Name("v2.instances").Methods(http.MethodPut)
 
 	router.HandleFunc("/health/", healthHandler).Name("health").Methods(http.MethodGet)
 	router.HandleFunc("/", homeHandler).Name("home").Methods(http.MethodGet)

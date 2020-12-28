@@ -5,12 +5,14 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/sklevenz/lookup-broker/landscape"
 	"github.com/sklevenz/lookup-broker/openapi"
 )
@@ -21,6 +23,9 @@ const (
 	headerAPIVersion            string = "X-Broker-API-Version"
 	headerAPIOrginatingIdentity string = "X-Broker-API-Originating-Identity"
 	headerAPIRequestIdentity    string = "X-Broker-API-Request-Identity"
+
+	catalogServiceID = "1"
+	catalogPanID     = "1.1"
 )
 
 type userIDType struct {
@@ -115,7 +120,7 @@ func buildCatalog() *openapi.Catalog {
 	var services []openapi.Service
 	var service openapi.Service
 
-	service.Id = "lookup"
+	service.Id = catalogServiceID
 	service.Name = "lookup"
 	service.Description = "Lookup service broker"
 	service.Tags = append(service.Tags, "cf", "api", "cloudfoundry", "cloud controler", "uaa")
@@ -134,7 +139,7 @@ func buildCatalog() *openapi.Catalog {
 	plans := []openapi.Plan{}
 
 	plan := openapi.Plan{}
-	plan.Id = "extension"
+	plan.Id = catalogPanID
 	plan.Name = "extension"
 	plan.Description = "Topology lookup for Cloud Foundry extension landscapes"
 	plan.Metadata = make(map[string]interface{})
@@ -193,4 +198,52 @@ func apiVersionHandler(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func instancesHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	serviceInstanceID := vars["id"]
+	log.Println("serviceInstanceId = ", serviceInstanceID)
+
+	var requestContent openapi.ServiceInstanceProvisionRequest
+
+	err := json.NewDecoder(r.Body).Decode(&requestContent)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if requestContent.ServiceId != catalogServiceID {
+		err := errors.New("unsupported service id: " + requestContent.ServiceId)
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if requestContent.PlanId != catalogPanID {
+		err := errors.New("unsupported plan id: " + requestContent.PlanId)
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if requestContent.OrganizationGuid == "" && requestContent.Context["organization_guid"] == "" {
+		err := errors.New("organization_guid missing")
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if requestContent.SpaceGuid == "" && requestContent.Context["plan_guid"] == "" {
+		err := errors.New("space_guid missing")
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+
+	return
 }

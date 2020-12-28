@@ -10,7 +10,6 @@ import (
 
 func TestHealth(t *testing.T) {
 	request, _ := http.NewRequest(http.MethodGet, "/health/", nil)
-	request.SetBasicAuth("username", "password")
 	response := httptest.NewRecorder()
 
 	New().ServeHTTP(response, request)
@@ -22,7 +21,6 @@ func TestHealth(t *testing.T) {
 
 func TestHome(t *testing.T) {
 	request, _ := http.NewRequest(http.MethodGet, "/", nil)
-	request.SetBasicAuth("username", "password")
 	response := httptest.NewRecorder()
 
 	New().ServeHTTP(response, request)
