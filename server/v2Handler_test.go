@@ -184,7 +184,7 @@ func TestInstancesHandlerWrongBody(t *testing.T) {
 	payloadBuf := new(bytes.Buffer)
 	json.NewEncoder(payloadBuf).Encode(data)
 
-	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/:123/", payloadBuf)
+	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/123/", payloadBuf)
 	assert.Nil(t, err)
 	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
 	request.Header.Set(headerContentType, contentTypeJSON)
@@ -196,7 +196,7 @@ func TestInstancesHandlerWrongBody(t *testing.T) {
 }
 
 func TestInstancesHandlerWrongContentType(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodPut, "/v2/service_instances/:123/", strings.NewReader("text"))
+	request, _ := http.NewRequest(http.MethodPut, "/v2/service_instances/123/", strings.NewReader("text"))
 	request.Header.Set(headerContentType, contentTypeTEXT)
 	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
 
