@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,12 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestV2Handler(t *testing.T) {
-	log.Println("nothing to test")
-}
-
 func TestNoApiVersion(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 
 	response := httptest.NewRecorder()
 	New().ServeHTTP(response, request)
@@ -29,7 +24,7 @@ func TestNoApiVersion(t *testing.T) {
 	assert.Equal(t, http.StatusPreconditionFailed, response.Result().StatusCode)
 }
 func TestWrongApiVersionFormat(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 	request.Header.Set(headerAPIVersion, "abc")
 
 	response := httptest.NewRecorder()
@@ -40,7 +35,7 @@ func TestWrongApiVersionFormat(t *testing.T) {
 }
 
 func TestWrongApiVersion(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 	request.Header.Set(headerAPIVersion, "1.2")
 
 	response := httptest.NewRecorder()
@@ -51,7 +46,7 @@ func TestWrongApiVersion(t *testing.T) {
 }
 
 func TestCorrectApiVersion(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
 
 	response := httptest.NewRecorder()
@@ -61,17 +56,8 @@ func TestCorrectApiVersion(t *testing.T) {
 	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
 }
 
-func TestRedirect(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
-	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
-
-	response := httptest.NewRecorder()
-	New().ServeHTTP(response, request)
-
-	assert.Equal(t, http.StatusMovedPermanently, response.Result().StatusCode)
-}
 func TestAPIOriginatingIdentity(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 	request.Header.Set(headerAPIOrginatingIdentity, "cloudfoundry eyANCiAgInVzZXJfaWQiOiAiNjgzZWE3NDgtMzA5Mi00ZmY0LWI2NTYtMzljYWNjNGQ1MzYwIg0KfQ==")
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
@@ -92,7 +78,7 @@ func TestAPIOriginatingIdentity(t *testing.T) {
 }
 
 func TestAPIRequestIdentity(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 	request.Header.Set(headerAPIRequestIdentity, "e26cee84-6b38-4456-b34e-d1a9f002c956")
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +99,7 @@ func TestAPIRequestIdentity(t *testing.T) {
 	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
 }
 func TestOSBErrorHandler(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 
 	err := &openapi.Error{
 		Error:            "AsyncRequired",
@@ -140,7 +126,7 @@ func TestOSBErrorHandler(t *testing.T) {
 }
 
 func TestCatalogHandler(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog/", nil)
+	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 	request.Header.Set(headerAPIVersion, "2.2")
 
 	response := httptest.NewRecorder()
@@ -153,21 +139,23 @@ func TestCatalogHandler(t *testing.T) {
 }
 
 func TestInstancesHandler(t *testing.T) {
-	data := openapi.ServiceInstanceProvisionRequest{
-		ServiceId:        "1",
-		PlanId:           "1.1",
-		OrganizationGuid: "x",
-		SpaceGuid:        "y",
-		Context: map[string]interface{}{
-			"organization_guid": "x",
-			"space_guid":        "y",
+
+	const payload = `{
+		"service_id": "1",
+		"plan_id": "1.1",
+		"context": {
+		  "platform": "cloudfoundry",
+		  "some_field": "some-contextual-data"
 		},
-	}
+		"organization_guid": "org-guid-here",
+		"space_guid": "space-guid-here",
+		"parameters": {
+		  "parameter1": 1,
+		  "parameter2": "foo"
+		}
+	  }`
 
-	payloadBuf := new(bytes.Buffer)
-	json.NewEncoder(payloadBuf).Encode(data)
-
-	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/:123/", payloadBuf)
+	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/123", strings.NewReader(payload))
 	assert.Nil(t, err)
 	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
 	request.Header.Set(headerContentType, contentTypeJSON)
@@ -179,12 +167,22 @@ func TestInstancesHandler(t *testing.T) {
 }
 
 func TestInstancesHandlerWrongBody(t *testing.T) {
-	data := openapi.ServiceInstanceProvisionRequest{}
+	const payload = `{
+		"service_id": "",
+		"plan_id": "",
+		"context": {
+		  "platform": "cloudfoundry",
+		  "some_field": "some-contextual-data"
+		},
+		"organization_guid": "org-guid-here",
+		"space_guid": "space-guid-here",
+		"parameters": {
+		  "parameter1": 1,
+		  "parameter2": "foo"
+		}
+	  }`
 
-	payloadBuf := new(bytes.Buffer)
-	json.NewEncoder(payloadBuf).Encode(data)
-
-	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/123/", payloadBuf)
+	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/123", strings.NewReader(payload))
 	assert.Nil(t, err)
 	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
 	request.Header.Set(headerContentType, contentTypeJSON)
@@ -196,7 +194,7 @@ func TestInstancesHandlerWrongBody(t *testing.T) {
 }
 
 func TestInstancesHandlerWrongContentType(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodPut, "/v2/service_instances/123/", strings.NewReader("text"))
+	request, _ := http.NewRequest(http.MethodPut, "/v2/service_instances/123", strings.NewReader("text"))
 	request.Header.Set(headerContentType, contentTypeTEXT)
 	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
 

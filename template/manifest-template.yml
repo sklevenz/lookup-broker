@@ -7,7 +7,7 @@ applications:
     buildpacks:
       - go_buildpack
     health-check-type: https
-    health-check-http-endpoint: /health/
+    health-check-http-endpoint: /health
     env:
       GO_LINKER_SYMBOL: main.Commit
       GO_LINKER_VALUE: "???"
