@@ -57,7 +57,7 @@ def release(verbose):
 def login(verbose):
     print("-- login cloud foundry")
 
-    config = Path("./gen/config.yml")
+    config = Path("./cfg/config.yml")
     if not config.exists():
         print("call \'./bin/make.py config\'")
         exit()
@@ -79,7 +79,7 @@ def login(verbose):
 def push(verbose):
     print("-- push to cloud foundry")
 
-    manifest = Path("./gen/manifest.yml")
+    manifest = Path("./cfg/manifest.yml")
     if not manifest.exists():
         print("call \'./bin/make.py config\'")
         exit()
@@ -90,16 +90,16 @@ def push(verbose):
 def config(verbose):
     print("-- create configuration")
 
-    Path("./gen").mkdir(exist_ok=True)
+    Path("./cfg").mkdir(exist_ok=True)
 
-    manifest = Path("./gen/manifest.yml")
+    manifest = Path("./cfg/manifest.yml")
     if manifest.exists():
         print("{} file exists already".format(manifest))
     else:
         copyfile("./template/manifest-template.yml", manifest)
         print("file created: {}".format(manifest))
 
-    config = Path("./gen/config.yml")
+    config = Path("./cfg/config.yml")
     if config.exists():
         print("{} file exists already".format(config))
     else:
@@ -122,7 +122,7 @@ def dispatcher(cmd):
 
 
 def checkConfig():
-    if not os.path.isfile("./gen/manifest.yml") or not os.path.isfile("./gen/config.yml"):
+    if not os.path.isfile("./cfg/manifest.yml") or not os.path.isfile("./cfg/config.yml"):
         print("call \'./bin/make.py config\'")
         exit()
 
