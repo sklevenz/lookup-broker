@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -138,7 +139,7 @@ func TestCatalogHandler(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("W/\"%v\"", "97a15070f5f8c3bfe47678c5409471f6"), response.Header().Get(headerETag))
 }
 
-func TestInstancesHandler(t *testing.T) {
+func TestInstancePutHandler(t *testing.T) {
 
 	const payload = `{
 		"service_id": "1",
@@ -164,9 +165,17 @@ func TestInstancesHandler(t *testing.T) {
 	New().ServeHTTP(response, request)
 
 	assert.Equal(t, http.StatusCreated, response.Result().StatusCode)
+
+	var responseContent openapi.ServiceInstanceProvisionResponse
+
+	err = json.NewDecoder(response.Body).Decode(&responseContent)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "", responseContent.DashboardUrl)
+
 }
 
-func TestInstancesHandlerWrongBody(t *testing.T) {
+func TestInstancePutHandlerWrongBody(t *testing.T) {
 	const payload = `{
 		"service_id": "",
 		"plan_id": "",
@@ -191,15 +200,4 @@ func TestInstancesHandlerWrongBody(t *testing.T) {
 	New().ServeHTTP(response, request)
 
 	assert.Equal(t, http.StatusBadRequest, response.Result().StatusCode)
-}
-
-func TestInstancesHandlerWrongContentType(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodPut, "/v2/service_instances/123", strings.NewReader("text"))
-	request.Header.Set(headerContentType, contentTypeTEXT)
-	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
-
-	response := httptest.NewRecorder()
-	New().ServeHTTP(response, request)
-
-	assert.Equal(t, http.StatusNotFound, response.Result().StatusCode)
 }

@@ -104,7 +104,7 @@ func handleHTTPError(w http.ResponseWriter, code int, err error) {
 }
 
 func catalogHandler(w http.ResponseWriter, r *http.Request) {
-	js, err := json.Marshal(buildCatalog())
+	js, err := json.Marshal(buildCatalog(r))
 	if err != nil {
 		handleHTTPError(w, http.StatusInternalServerError, err)
 		return
@@ -115,7 +115,7 @@ func catalogHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, "xxx", time.Now(), reader)
 }
 
-func buildCatalog() *openapi.Catalog {
+func buildCatalog(r *http.Request) *openapi.Catalog {
 	catalog := openapi.Catalog{}
 	var services []openapi.Service
 	var service openapi.Service
@@ -132,7 +132,7 @@ func buildCatalog() *openapi.Catalog {
 	service.Metadata = map[string]interface{}{}
 	service.DashboardClient = openapi.DashboardClient{}
 	service.DashboardClient.Id = "lookupDashboardClientId"
-	service.DashboardClient.RedirectUri = "https://lookup-broker.cfapps.eu10.hana.ondemand.com/"
+	service.DashboardClient.RedirectUri = ""
 	service.DashboardClient.Secret = "admin"
 	service.PlanUpdateable = true
 
@@ -163,7 +163,7 @@ func buildCatalog() *openapi.Catalog {
 	return &catalog
 }
 
-func etagHandler(next http.Handler) http.Handler {
+func cacheHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		landscapes := landscape.Get()
@@ -200,7 +200,31 @@ func apiVersionHandler(next http.Handler) http.Handler {
 	})
 }
 
-func instancesHandler(w http.ResponseWriter, r *http.Request) {
+func bindingPutHandler(w http.ResponseWriter, r *http.Request) {
+	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
+}
+
+func bindingGetHandler(w http.ResponseWriter, r *http.Request) {
+	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
+}
+
+func bindingDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
+}
+
+func instancePatchHandler(w http.ResponseWriter, r *http.Request) {
+	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
+}
+
+func instanceGetHandler(w http.ResponseWriter, r *http.Request) {
+	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
+}
+
+func instanceDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
+}
+
+func instancePutHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	serviceInstanceID := vars["id"]
@@ -243,7 +267,17 @@ func instancesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var responseContent openapi.ServiceInstanceProvisionResponse
+
+	js, err := json.Marshal(responseContent)
+	if err != nil {
+		handleHTTPError(w, http.StatusInternalServerError, err)
+		return
+	}
 	w.WriteHeader(http.StatusCreated)
+	w.Header().Set(headerContentType, contentTypeJSON)
+	reader := bytes.NewReader(js)
+	http.ServeContent(w, r, "xxx", time.Now(), reader)
 
 	return
 }
