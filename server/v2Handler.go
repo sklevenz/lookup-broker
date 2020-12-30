@@ -37,6 +37,8 @@ type originatingIdentityType struct {
 	UserID   userIDType `json:"user_id_object"`
 }
 
+var startTime = time.Now()
+
 func requestIdentityLogHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headerValue := r.Header.Get(headerAPIRequestIdentity)
@@ -111,8 +113,10 @@ func catalogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
+	w.Header().Set(headerETag, eTag(js))
+
 	reader := bytes.NewReader(js)
-	http.ServeContent(w, r, "xxx", time.Now(), reader)
+	http.ServeContent(w, r, "", startTime, reader)
 }
 
 func buildCatalog(r *http.Request) *openapi.Catalog {
@@ -163,19 +167,13 @@ func buildCatalog(r *http.Request) *openapi.Catalog {
 	return &catalog
 }
 
-func cacheHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		landscapes := landscape.Get()
-		s1 := fmt.Sprintf("%v", landscapes)
-		s2 := md5.Sum([]byte(s1))
-		hash := fmt.Sprintf("%x", s2)
-
-		w.Header().Set(headerETag, fmt.Sprintf("W/\"%v\"", hash))
-
-		next.ServeHTTP(w, r)
-	})
+func eTag(data interface{}) string {
+	s1 := fmt.Sprintf("%v", data)
+	s2 := md5.Sum([]byte(s1))
+	hash := fmt.Sprintf("%x", s2)
+	return fmt.Sprintf("W/\"%v\"", hash)
 }
+
 func apiVersionHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		supportedAPIVersion := strings.Split(supportedAPIVersionValue, ".")[0]
@@ -200,35 +198,74 @@ func apiVersionHandler(next http.Handler) http.Handler {
 	})
 }
 
-func bindingPutHandler(w http.ResponseWriter, r *http.Request) {
-	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
-}
-
-func bindingGetHandler(w http.ResponseWriter, r *http.Request) {
-	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
-}
-
-func bindingDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
-}
-
 func instancePatchHandler(w http.ResponseWriter, r *http.Request) {
-	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
+	vars := mux.Vars(r)
+	serviceInstanceID := vars["iid"]
+	log.Println("serviceInstanceID = ", serviceInstanceID)
+
+	var requestContent openapi.ServiceInstanceUpdateRequest
+
+	err := json.NewDecoder(r.Body).Decode(&requestContent)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if requestContent.ServiceId != catalogServiceID {
+		err := errors.New("unsupported service id: " + requestContent.ServiceId)
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if requestContent.PlanId != catalogPanID {
+		err := errors.New("unsupported plan id: " + requestContent.PlanId)
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	responseContent := openapi.ServiceInstanceProvisionResponse{}
+
+	js, err := json.Marshal(responseContent)
+	if err != nil {
+		handleHTTPError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set(headerContentType, contentTypeJSON)
+	w.Header().Set(headerETag, eTag(responseContent))
+	http.ServeContent(w, r, "", startTime, bytes.NewReader(js))
+
+	return
 }
 
 func instanceGetHandler(w http.ResponseWriter, r *http.Request) {
-	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
-}
+	vars := mux.Vars(r)
+	serviceInstanceID := vars["iid"]
+	log.Println("serviceInstanceID = ", serviceInstanceID)
 
-func instanceDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	handleHTTPError(w, http.StatusNotImplemented, errors.New("not implemented"))
+	responseContent := openapi.ServiceInstanceResource{}
+
+	js, err := json.Marshal(responseContent)
+	if err != nil {
+		handleHTTPError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	w.Header().Set(headerETag, eTag(responseContent))
+	w.Header().Set(headerContentType, contentTypeJSON)
+	http.ServeContent(w, r, "", startTime, bytes.NewReader(js))
+
+	return
 }
 
 func instancePutHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
-	serviceInstanceID := vars["id"]
-	log.Println("serviceInstanceId = ", serviceInstanceID)
+	serviceInstanceID := vars["iid"]
+	log.Println("serviceInstanceID = ", serviceInstanceID)
 
 	var requestContent openapi.ServiceInstanceProvisionRequest
 
@@ -267,7 +304,7 @@ func instancePutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var responseContent openapi.ServiceInstanceProvisionResponse
+	responseContent := openapi.ServiceInstanceProvisionResponse{}
 
 	js, err := json.Marshal(responseContent)
 	if err != nil {
@@ -276,8 +313,84 @@ func instancePutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set(headerContentType, contentTypeJSON)
-	reader := bytes.NewReader(js)
-	http.ServeContent(w, r, "xxx", time.Now(), reader)
+	w.Header().Set(headerETag, eTag(responseContent))
+	http.ServeContent(w, r, "", startTime, bytes.NewReader(js))
+
+	return
+}
+
+func instanceDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	serviceInstanceID := vars["iid"]
+	log.Println("serviceInstanceID = ", serviceInstanceID)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func bindingDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	serviceInstanceID := vars["iid"]
+	log.Println("serviceInstanceID = ", serviceInstanceID)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func bindingGetHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	serviceInstanceID := vars["iid"]
+	log.Println("serviceInstanceID = ", serviceInstanceID)
+	serviceBindingID := vars["bid"]
+	log.Println("serviceBindingID = ", serviceBindingID)
+
+	responseContent := openapi.ServiceBindingResource{}
+
+	responseContent.Parameters = make(map[string]interface{})
+	responseContent.Parameters["landscapes"] = landscape.Get()
+
+	js, err := json.Marshal(responseContent)
+	if err != nil {
+		handleHTTPError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	w.Header().Set(headerETag, eTag(responseContent))
+	w.Header().Set(headerContentType, contentTypeJSON)
+	http.ServeContent(w, r, "", startTime, bytes.NewReader(js))
+
+	return
+}
+
+func bindingPutHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	serviceInstanceID := vars["iid"]
+	log.Println("serviceInstanceID = ", serviceInstanceID)
+	serviceBindingID := vars["bid"]
+	log.Println("serviceBindingID = ", serviceBindingID)
+
+	var requestContent openapi.ServiceBindingRequest
+
+	err := json.NewDecoder(r.Body).Decode(&requestContent)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		handleHTTPError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	responseContent := openapi.ServiceBindingResponse{}
+
+	// responseContent.Parameters = make(map[string]interface{})
+	// responseContent.Parameters["landscapes"] = landscape.Get()
+
+	js, err := json.Marshal(responseContent)
+	if err != nil {
+		handleHTTPError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set(headerETag, eTag(responseContent))
+	w.Header().Set(headerContentType, contentTypeJSON)
+	http.ServeContent(w, r, "", startTime, bytes.NewReader(js))
 
 	return
 }

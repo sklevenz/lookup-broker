@@ -15,6 +15,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	landscapes = `{
+				"cf-eu10": {
+				"cloudcontroller": "https://api.cf.eu10.hana.ondemand.com",
+				"uaa": "https://uaa.cf.eu10.hana.ondemand.com",
+				"labels": [
+					"master",
+					"aws"
+					]
+				},
+				"cf-eu10-001": {
+				"cloudcontroller": "https://api.cf.eu10-001.hana.ondemand.com",
+				"uaa": "https://uaa.cf.eu10-001.hana.ondemand.com",
+				"labels": [
+					"scaleout",
+					"aws"
+					]
+				},
+				"cf-eu10-002": {
+				"cloudcontroller": "https://api.cf.eu10-002.hana.ondemand.com",
+				"uaa": "https://uaa.cf.eu10-002.hana.ondemand.com",
+				"labels": [
+					"scaleout",
+					"aws"
+					]
+				}
+			}`
+)
+
 func TestNoApiVersion(t *testing.T) {
 	request, _ := http.NewRequest(http.MethodGet, "/v2/catalog", nil)
 
@@ -136,7 +165,7 @@ func TestCatalogHandler(t *testing.T) {
 	assert.Contains(t, response.Body.String(), "Lookup service broker")
 	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
 	assert.Equal(t, contentTypeJSON, response.Header().Get(headerContentType))
-	assert.Equal(t, fmt.Sprintf("W/\"%v\"", "97a15070f5f8c3bfe47678c5409471f6"), response.Header().Get(headerETag))
+	assert.Equal(t, fmt.Sprintf("W/\"%v\"", "4b676504ada9e24a9f4be6c86d89a83e"), response.Header().Get(headerETag))
 }
 
 func TestInstancePutHandler(t *testing.T) {
@@ -172,7 +201,6 @@ func TestInstancePutHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, "", responseContent.DashboardUrl)
-
 }
 
 func TestInstancePutHandlerWrongBody(t *testing.T) {
@@ -200,4 +228,136 @@ func TestInstancePutHandlerWrongBody(t *testing.T) {
 	New().ServeHTTP(response, request)
 
 	assert.Equal(t, http.StatusBadRequest, response.Result().StatusCode)
+}
+
+func TestInstanceGetHandler(t *testing.T) {
+
+	request, err := http.NewRequest(http.MethodGet, "/v2/service_instances/123", nil)
+	assert.Nil(t, err)
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+
+	response := httptest.NewRecorder()
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
+
+	var responseContent openapi.ServiceInstanceResource
+
+	err = json.NewDecoder(response.Body).Decode(&responseContent)
+	assert.Nil(t, err)
+	assert.Equal(t, "", responseContent.DashboardUrl)
+}
+
+func TestInstancePatchHandler(t *testing.T) {
+
+	const payload = `{
+		"service_id": "1",
+		"plan_id": "1.1",
+		"context": {
+		  "platform": "cloudfoundry",
+		  "some_field": "some-contextual-data"
+		},
+		"organization_guid": "org-guid-here",
+		"space_guid": "space-guid-here",
+		"parameters": {
+		  "parameter1": 1,
+		  "parameter2": "foo"
+		}
+	  }`
+
+	request, err := http.NewRequest(http.MethodPatch, "/v2/service_instances/123", strings.NewReader(payload))
+	assert.Nil(t, err)
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+	request.Header.Set(headerContentType, contentTypeJSON)
+
+	response := httptest.NewRecorder()
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
+
+	var responseContent openapi.ServiceInstanceUpdateRequest
+
+	err = json.NewDecoder(response.Body).Decode(&responseContent)
+	assert.Nil(t, err)
+}
+
+func TestInstanceDeleteHandler(t *testing.T) {
+
+	request, err := http.NewRequest(http.MethodDelete, "/v2/service_instances/123", nil)
+	assert.Nil(t, err)
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+
+	response := httptest.NewRecorder()
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
+}
+
+func TestBindingDeleteHandler(t *testing.T) {
+
+	request, err := http.NewRequest(http.MethodDelete, "/v2/service_instances/123/service_bindings/456", nil)
+	assert.Nil(t, err)
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+
+	response := httptest.NewRecorder()
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
+}
+
+func TestBindingGetHandler(t *testing.T) {
+	os.Setenv("LANDSCAPES", landscapes)
+
+	request, err := http.NewRequest(http.MethodGet, "/v2/service_instances/123/service_bindings/456", nil)
+	assert.Nil(t, err)
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+
+	response := httptest.NewRecorder()
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
+
+	var responseContent openapi.ServiceBindingResource
+
+	err = json.NewDecoder(response.Body).Decode(&responseContent)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, responseContent)
+	assert.NotNil(t, responseContent.Parameters)
+	assert.NotNil(t, responseContent.Parameters["landscapes"])
+}
+
+func TestBindingPutHandler(t *testing.T) {
+	const payload = `{
+		"service_id": "1",
+		"plan_id": "1.1",
+		"context": {
+		  "platform": "cloudfoundry",
+		  "some_field": "some-contextual-data"
+		},
+		"organization_guid": "org-guid-here",
+		"space_guid": "space-guid-here",
+		"parameters": {
+		  "parameter1": 1,
+		  "parameter2": "foo"
+		}
+	  }`
+
+	os.Setenv("LANDSCAPES", landscapes)
+
+	request, err := http.NewRequest(http.MethodPut, "/v2/service_instances/123/service_bindings/456", strings.NewReader(payload))
+	assert.Nil(t, err)
+	request.Header.Set(headerAPIVersion, supportedAPIVersionValue)
+	request.Header.Set(headerContentType, contentTypeJSON)
+
+	response := httptest.NewRecorder()
+	New().ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusCreated, response.Result().StatusCode)
+
+	var responseContent openapi.ServiceBindingResponse
+	err = json.NewDecoder(response.Body).Decode(&responseContent)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, responseContent)
 }

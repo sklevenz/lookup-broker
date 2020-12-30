@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-curl 'http://localhost:5000/v2/service_instances/:instance_id?accepts_incomplete=true' -d '{
+curl -iLs 'http://localhost:5000/v2/service_instances/:instance_id?accepts_incomplete=true' -d '{
   "context": {
     "platform": "cloudfoundry",
     "some_field": "some-contextual-data"
